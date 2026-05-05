@@ -289,7 +289,9 @@ with tab1:
 
         st.divider()
         st.subheader("⏳ Henüz Gelmeyen / Parkurda Bekleyen Sporcular")
-        bekleyenler = df_scored[df_scored['Durum'].isin(['Parkurda', 'Bekliyor', 'Parkurda/Bekliyor'])]
+        bekleyenler = df_scored[df_scored['Durum'].isin(['Parkurda', 'Bekliyor', 'Parkurda/Bekliyor'])].copy()
+        bekleyenler['cikis_sec'] = bekleyenler['Çıkış Saati'].apply(time_to_seconds)
+        bekleyenler = bekleyenler.sort_values(by='cikis_sec', ascending=True)
         st.dataframe(bekleyenler[['Göğüs No', 'İsim', 'Üniversite', 'Kategori', 'Çıkış Saati', 'Durum']], use_container_width=True, hide_index=True)
         
         st.divider()
