@@ -3,3 +3,5 @@ pandas
 pdfplumber
 numpy
 streamlit-autorefresh
+requests
+beautifulsoup4

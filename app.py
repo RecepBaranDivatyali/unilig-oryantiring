@@ -5,6 +5,8 @@ import io
 import os
 import numpy as np
 import re
+import requests
+from bs4 import BeautifulSoup
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
@@ -60,6 +62,39 @@ def update_data(new_df):
     st.session_state.df = new_df.copy()
     save_data(st.session_state.df)
 
+TOF_LIVE_URL = "https://www.oryantiring.org.tr/uploads/live/result.html"
+
+def fetch_live_results():
+    """TOF canlı sonuç sayfasından göğüs no ve süre verilerini çeker."""
+    try:
+        r = requests.get(TOF_LIVE_URL, timeout=10)
+        r.encoding = 'utf-8'
+        soup = BeautifulSoup(r.content, 'html.parser')
+        
+        data = []
+        valid_statuses = ['mp', 'dnf', 'dns', 'dsq']
+        
+        rows = soup.find_all('tr')
+        for row in rows:
+            cols = [td.get_text(strip=True) for td in row.find_all('td')]
+            if len(cols) >= 5:
+                # Sıra | No | Adı Soyadı | Kulübü | Süre | ...
+                # Sıra sütunu sayı mı?
+                if cols[0].isdigit() and cols[1].isdigit():
+                    bib = cols[1]
+                    sure = cols[4] if len(cols) > 4 else ''
+                    if sure:
+                        data.append({'Göğüs No': bib, 'Süre': sure})
+                # MP/DNF/DNS/DSQ durumları — sıra yerine durum kodu olabilir
+                elif cols[1].isdigit() and cols[-1].lower() in valid_statuses:
+                    bib = cols[1]
+                    sure = cols[-1].upper()
+                    data.append({'Göğüs No': bib, 'Süre': sure})
+        
+        return pd.DataFrame(data) if data else pd.DataFrame(columns=['Göğüs No', 'Süre'])
+    except Exception as e:
+        return str(e)
+
 # --- PDF İşleme Fonksiyonları ---
 def parse_start_list(file):
     data = []
@@ -77,6 +112,7 @@ def parse_start_list(file):
                     
                     if not ":" in line and len(parts) >= 2 and parts[0].isdigit():
                         raw_univ = " ".join(parts[1:])
+                        raw_univ = re.sub(r'\(?devam[ıi]\)?', '', raw_univ, flags=re.IGNORECASE)
                         current_univ = re.sub(r'[\(\)\d\s]+$', '', raw_univ).strip()
                         continue
                         
@@ -294,6 +330,12 @@ with tab1:
         bekleyenler = bekleyenler.sort_values(by='cikis_sec', ascending=True)
         st.dataframe(bekleyenler[['Göğüs No', 'İsim', 'Üniversite', 'Kategori', 'Çıkış Saati', 'Durum']], use_container_width=True, hide_index=True)
         
+        hatalilar_df = df_scored[df_scored['Durum'].isin(['MP', 'DNF', 'DNS', 'DSQ'])]
+        if not hatalilar_df.empty:
+            st.divider()
+            st.subheader("❌ Geçersiz Çıkış / Diskalifiye (MP, DNF, DNS, DSQ)")
+            st.dataframe(hatalilar_df[['Göğüs No', 'İsim', 'Üniversite', 'Kategori', '1. Gün Süresi', '2. Gün Süresi', 'Durum']], use_container_width=True, hide_index=True)
+        
         st.divider()
         st.subheader("📊 İstatistikler ve Tahminler")
         
@@ -366,7 +408,43 @@ with tab2:
                 st.error("PDF okunamadı. Formatın standart OE formatında olduğuna emin olun.")
 
         st.divider()
-        st.subheader("2. Toplu Sonuç Yükleme (PDF)")
+        st.subheader("🔴 2. Canlı Sonuç Çek (TOF Sistemi)")
+        st.info("Türkiye Oryantiring Federasyonu'nun canlı sonuç sayfasından verileri otomatik çeker ve sisteminizi günceller. PDF yüklemenize gerek kalmaz.")
+        
+        live_col1, live_col2 = st.columns(2)
+        with live_col1:
+            live_gun = st.selectbox("Hangi güne işlensin?", ["1. Gün Süresi", "2. Gün Süresi"], key='live_gun')
+        with live_col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🔴 Canlı Sonuçları Çek ve Güncelle", use_container_width=True):
+                with st.spinner("TOF sitesinden veriler çekiliyor..."):
+                    res_df = fetch_live_results()
+                
+                if isinstance(res_df, str):
+                    st.error(f"Bağlantı hatası: {res_df}")
+                elif res_df.empty:
+                    st.warning("Sitede henüz sonuç bulunamadı. Yarış başlamış olabilir, biraz bekleyin.")
+                else:
+                    df_temp = st.session_state.df.copy()
+                    df_temp[live_gun] = df_temp[live_gun].astype(object)
+                    updated = 0
+                    for _, row in res_df.iterrows():
+                        mask = df_temp['Göğüs No'] == row['Göğüs No']
+                        if mask.any():
+                            sure_val = str(row['Süre']).strip()
+                            df_temp.loc[mask, live_gun] = sure_val
+                            if sure_val.upper() in ['MP', 'DNF', 'DNS', 'DSQ']:
+                                df_temp.loc[mask, 'Durum'] = sure_val.upper()
+                            else:
+                                df_temp.loc[mask, 'Durum'] = 'Tamamladı'
+                            updated += 1
+                    update_data(df_temp)
+                    st.success(f"✅ {len(res_df)} sonuç çekildi, {updated} sporcu güncellendi!")
+                    if updated < len(res_df):
+                        st.info(f"ℹ️ {len(res_df) - updated} sporcu göğüs numarası eşleşmedi (farklı yarış kategorisi olabilir).")
+
+        st.divider()
+        st.subheader("3. Toplu Sonuç Yükleme (PDF)")
         col_res1, col_res2 = st.columns(2)
         with col_res1:
             res_file1 = st.file_uploader("1. Gün Sonuç PDF", type=['pdf'], key='res1')
