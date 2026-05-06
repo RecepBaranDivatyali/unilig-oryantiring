@@ -70,7 +70,7 @@ def update_data(new_df):
     st.session_state.df = new_df.copy()
     save_data(st.session_state.df)
 
-TOF_LIVE_URL = "https://www.oryantiring.org.tr/uploads/live/result.html"
+TOF_LIVE_URL = "https://www.oryantiring.org.tr/uploads/live/kastamonu/result.html"
 
 def fetch_live_results():
     """TOF canlı sonuç sayfasından göğüs no ve süre verilerini çeker."""
