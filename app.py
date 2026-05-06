@@ -58,6 +58,14 @@ def save_data(df):
 if 'df' not in st.session_state:
     st.session_state.df = load_data()
 
+# --- File uploader key sayaçları (sıfırlamak için) ---
+if 'key_start' not in st.session_state:
+    st.session_state.key_start = 0
+if 'key_res1' not in st.session_state:
+    st.session_state.key_res1 = 0
+if 'key_res2' not in st.session_state:
+    st.session_state.key_res2 = 0
+
 def update_data(new_df):
     st.session_state.df = new_df.copy()
     save_data(st.session_state.df)
@@ -396,14 +404,17 @@ with tab2:
     if admin_pass == ADMIN_PASSWORD:
         st.success("Admin paneline giriş yapıldı.")
         
+        st.divider()
         st.subheader("1. Çıkış Listesi (Start List) Yükleme")
         st.info("Sabah yarıştan önce çıkış listesi PDF'ini buradan yükleyin. Herkes 'Parkurda/Bekliyor' olarak ayarlanır.")
-        start_file = st.file_uploader("Çıkış Listesi PDF Yükle", type=['pdf'], key='start_list')
+        start_file = st.file_uploader("Çıkış Listesi PDF Yükle", type=['pdf'], key=f'start_list_{st.session_state.key_start}')
         if start_file and st.button("Çıkış Listesini İşle"):
             new_data = parse_start_list(start_file)
             if not new_data.empty:
                 update_data(new_data)
+                st.session_state.key_start += 1
                 st.success(f"{len(new_data)} sporcu başarıyla eklendi!")
+                st.rerun()
             else:
                 st.error("PDF okunamadı. Formatın standart OE formatında olduğuna emin olun.")
 
@@ -447,7 +458,7 @@ with tab2:
         st.subheader("3. Toplu Sonuç Yükleme (PDF)")
         col_res1, col_res2 = st.columns(2)
         with col_res1:
-            res_file1 = st.file_uploader("1. Gün Sonuç PDF", type=['pdf'], key='res1')
+            res_file1 = st.file_uploader("1. Gün Sonuç PDF", type=['pdf'], key=f'res1_{st.session_state.key_res1}')
             if res_file1 and st.button("1. Gün Sonuçlarını İşle"):
                 res_df = parse_results(res_file1)
                 df_temp = st.session_state.df.copy()
@@ -464,10 +475,12 @@ with tab2:
                             df_temp.loc[mask, 'Durum'] = 'Tamamladı'
                         updated += 1
                 update_data(df_temp)
+                st.session_state.key_res1 += 1
                 st.success(f"1. Gün için {updated} sonuç başarıyla güncellendi!")
+                st.rerun()
                 
         with col_res2:
-            res_file2 = st.file_uploader("2. Gün Sonuç PDF", type=['pdf'], key='res2')
+            res_file2 = st.file_uploader("2. Gün Sonuç PDF", type=['pdf'], key=f'res2_{st.session_state.key_res2}')
             if res_file2 and st.button("2. Gün Sonuçlarını İşle"):
                 res_df = parse_results(res_file2)
                 df_temp = st.session_state.df.copy()
@@ -484,7 +497,9 @@ with tab2:
                             df_temp.loc[mask, 'Durum'] = 'Tamamladı'
                         updated += 1
                 update_data(df_temp)
+                st.session_state.key_res2 += 1
                 st.success(f"2. Gün için {updated} sonuç başarıyla güncellendi!")
+                st.rerun()
 
         st.divider()
         st.subheader("3. Hızlı Manuel Giriş")
