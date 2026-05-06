@@ -70,13 +70,14 @@ def update_data(new_df):
     st.session_state.df = new_df.copy()
     save_data(st.session_state.df)
 
-TOF_LIVE_URL = "https://www.oryantiring.org.tr/uploads/live/kastamonu/result.html"
+TOF_LIVE_URL = "https://www.oryantiring.org.tr/uploads/livelocals/result_kastamonu.html"
 
 def fetch_live_results():
     """TOF canlı sonuç sayfasından göğüs no ve süre verilerini çeker."""
     try:
         r = requests.get(TOF_LIVE_URL, timeout=10)
-        r.encoding = 'utf-8'
+        # Türkçe karakter desteği için kodlamayı ayarla
+        r.encoding = r.apparent_encoding if r.apparent_encoding else 'windows-1254'
         soup = BeautifulSoup(r.content, 'html.parser')
         
         data = []
