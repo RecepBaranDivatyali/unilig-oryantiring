@@ -360,37 +360,62 @@ with tab1:
                 else: st.info("Her iki gün tamamlanınca oluşur.")
 
         st.divider()
-        categories_with_default = ["Seçiniz..."] + categories
-        selected_kat = st.radio("📌 **Bireysel Sonuçlar ve Detaylı Analiz İçin Kategori Seçin:**", categories_with_default, horizontal=True)
-        st.markdown("<hr style='border: 2px solid #ccc; margin: 10px 0 30px 0;'>", unsafe_allow_html=True)
+        st.divider()
+        st.markdown("<h3 style='text-align: center; color: #4CAF50;'>👤 BİREYSEL DETAYLI SONUÇLAR</h3>", unsafe_allow_html=True)
         
-        if selected_kat != "Seçiniz...":
-            kat = selected_kat
-            st.markdown(f"<h2 style='text-align: center; color: #4CAF50;'>🏃‍♂️ {kat} DETAYLI SONUÇLAR 🏃‍♀️</h2>", unsafe_allow_html=True)
-            
-            st.markdown("### 👤 BİREYSEL SIRALAMALAR")
-            col4, col5, col6 = st.columns(3)
-            with col4:
-                st.markdown("**🥇 1. Gün Bireysel**")
-                if not df_ind_day1.empty and kat in df_ind_day1['Kategori'].values:
-                    df_show = df_ind_day1[df_ind_day1['Kategori'] == kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
-                    df_show.index += 1
-                    st.dataframe(df_show, use_container_width=True)
-                else: st.info("Sonuç yok.")
-            with col5:
-                st.markdown("**🥈 2. Gün Bireysel**")
-                if not df_ind_day2.empty and kat in df_ind_day2['Kategori'].values:
-                    df_show = df_ind_day2[df_ind_day2['Kategori'] == kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
-                    df_show.index += 1
-                    st.dataframe(df_show, use_container_width=True)
-                else: st.info("Sonuç yok.")
-            with col6:
-                st.markdown("**🏆 Genel Bireysel**")
-                if not df_ind_genel.empty and kat in df_ind_genel['Kategori'].values:
-                    df_show = df_ind_genel[df_ind_genel['Kategori'] == kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
-                    df_show.index += 1
-                    st.dataframe(df_show, use_container_width=True)
-                else: st.info("Sonuç yok.")
+        ind_tab1, ind_tab2 = st.tabs(["👩‍🎓 KADINLAR BİREYSEL", "👨‍🎓 ERKEKLER BİREYSEL"])
+        
+        with ind_tab1:
+            if kadın_kat:
+                col4, col5, col6 = st.columns(3)
+                with col4:
+                    st.markdown("**🥇 1. Gün**")
+                    if not df_ind_day1.empty and kadın_kat in df_ind_day1['Kategori'].values:
+                        df_show = df_ind_day1[df_ind_day1['Kategori'] == kadın_kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Sonuç yok.")
+                with col5:
+                    st.markdown("**🥈 2. Gün**")
+                    if not df_ind_day2.empty and kadın_kat in df_ind_day2['Kategori'].values:
+                        df_show = df_ind_day2[df_ind_day2['Kategori'] == kadın_kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Sonuç yok.")
+                with col6:
+                    st.markdown("**🏆 Genel Toplam**")
+                    if not df_ind_genel.empty and kadın_kat in df_ind_genel['Kategori'].values:
+                        df_show = df_ind_genel[df_ind_genel['Kategori'] == kadın_kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Sonuç yok.")
+            else: st.info("Kadın kategorisi verisi bulunamadı.")
+
+        with ind_tab2:
+            if erkek_kat:
+                col7, col8, col9 = st.columns(3)
+                with col7:
+                    st.markdown("**🥇 1. Gün**")
+                    if not df_ind_day1.empty and erkek_kat in df_ind_day1['Kategori'].values:
+                        df_show = df_ind_day1[df_ind_day1['Kategori'] == erkek_kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Sonuç yok.")
+                with col8:
+                    st.markdown("**🥈 2. Gün**")
+                    if not df_ind_day2.empty and erkek_kat in df_ind_day2['Kategori'].values:
+                        df_show = df_ind_day2[df_ind_day2['Kategori'] == erkek_kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Sonuç yok.")
+                with col9:
+                    st.markdown("**🏆 Genel Toplam**")
+                    if not df_ind_genel.empty and erkek_kat in df_ind_genel['Kategori'].values:
+                        df_show = df_ind_genel[df_ind_genel['Kategori'] == erkek_kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Sonuç yok.")
+            else: st.info("Erkek kategorisi verisi bulunamadı.")
                 
             st.markdown("### 👤 BİREYSEL SIRALAMALAR")
             col4, col5, col6 = st.columns(3)
@@ -617,10 +642,23 @@ with tab2:
                     st.error("Göğüs No bulunamadı.")
                     
         st.divider()
-        st.subheader("Tehlikeli İşlemler")
-        if st.button("Tüm Veriyi Sıfırla"):
+        st.subheader("⚠️ Tehlikeli İşlemler")
+        st.warning("Bu bölümdeki işlemler veriyi kalıcı olarak değiştirir.")
+        
+        if st.button("🧹 Sadece 2. Gün Verilerini Temizle"):
+            df_temp = st.session_state.df.copy()
+            df_temp['2. Gün Süresi'] = ""
+            # Sadece 2. gün için durumu sıfırla (1. gün bitirenler 'Tamamladı' kalabilir)
+            # Ama basitlik için hepsini 'Bekliyor' yapıp update_dynamic_status'a bırakabiliriz
+            df_temp['Durum'] = 'Bekliyor' 
+            update_data(df_temp)
+            st.success("2. Gün verileri temizlendi, 1. Gün verileri korundu! (Sayfayı yenileyin)")
+            st.rerun()
+            
+        if st.button("🗑️ TÜM VERİLERİ SİL (Sıfırla)"):
             update_data(pd.DataFrame(columns=['Göğüs No', 'İsim', 'Üniversite', 'Kategori', '1. Gün Çıkış', '2. Gün Çıkış', '1. Gün Süresi', '2. Gün Süresi', 'Durum']))
-            st.warning("Veriler sıfırlandı!")
+            st.warning("Sistem tamamen sıfırlandı!")
+            st.rerun()
             
     elif admin_pass != "":
         st.error("Hatalı Şifre!")
