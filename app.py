@@ -188,6 +188,9 @@ def get_team_scores(df_calc, day_col):
     sec_col = f'{day_col} Süresi_sec'
     if sec_col not in df_calc.columns: return pd.DataFrame()
     
+    # Ferdi kategorileri puanlamaya dahil edilmez
+    df_calc = df_calc[~df_calc['Kategori'].str.upper().str.contains('FERDİ', na=False)]
+    
     team_scores = []
     for kat in df_calc['Kategori'].dropna().unique():
         for univ in df_calc['Üniversite'].dropna().unique():
@@ -261,11 +264,15 @@ with tab1:
         df_ind_genel = get_general_individual_scores(df_scored)
         
         genel_team_scores = []
-        if not df_team_day1.empty and not df_team_day2.empty:
+        if not df_team_day1.empty or not df_team_day2.empty:
+            # Ferdi olmayan sporcuları filtrele
+            df_non_ferdi = df_scored[~df_scored['Kategori'].str.upper().str.contains('FERDİ', na=False)]
             for kat in categories:
-                for univ in df_scored['Üniversite'].dropna().unique():
-                    univ_day1 = df_scored[(df_scored['Üniversite'] == univ) & (df_scored['Kategori'] == kat) & (df_scored['1. Gün Süresi_sec'] > 0)]
-                    univ_day2 = df_scored[(df_scored['Üniversite'] == univ) & (df_scored['Kategori'] == kat) & (df_scored['2. Gün Süresi_sec'] > 0)]
+                for univ in df_non_ferdi['Üniversite'].dropna().unique():
+                    univ_day1 = df_non_ferdi[(df_non_ferdi['Üniversite'] == univ) & (df_non_ferdi['Kategori'] == kat) & (df_non_ferdi['1. Gün Süresi_sec'] > 0)]
+                    univ_day2 = df_non_ferdi[(df_non_ferdi['Üniversite'] == univ) & (df_non_ferdi['Kategori'] == kat) & (df_non_ferdi['2. Gün Süresi_sec'] > 0)]
+                    
+                    # Genel takım sıralaması için her iki günde de en az 3 sporcu olması gerekir
                     if len(univ_day1) >= 3 and len(univ_day2) >= 3:
                         t1 = univ_day1.nsmallest(3, '1. Gün Süresi_sec')['1. Gün Süresi_sec'].sum()
                         t2 = univ_day2.nsmallest(3, '2. Gün Süresi_sec')['2. Gün Süresi_sec'].sum()
@@ -278,7 +285,45 @@ with tab1:
         st.markdown("<hr style='border: 2px solid #ccc; margin: 10px 0 30px 0;'>", unsafe_allow_html=True)
         
         if selected_kat == "Seçiniz...":
-            st.info("👈 Lütfen sonuçları görüntülemek için yukarıdan 'ERKEK' veya 'KADIN' kategorilerinden birini seçin.")
+            st.markdown("### 🏆 TAKIM SIRALAMALARI ÖZETİ")
+            summary_col1, summary_col2 = st.columns(2)
+            
+            with summary_col1:
+                st.markdown("<h4 style='text-align: center; color: #ff4b4b;'>👩‍🎓 KADINLAR TAKIM</h4>", unsafe_allow_html=True)
+                # Genel varsa genel, yoksa 1. gün
+                kadın_kat = next((k for k in categories if "KADIN" in k.upper()), None)
+                if kadın_kat:
+                    if not df_team_genel.empty and kadın_kat in df_team_genel['Kategori'].values:
+                        st.caption("Genel Toplam (1.+2. Gün)")
+                        df_show = df_team_genel[df_team_genel['Kategori'] == kadın_kat].sort_values(by='Genel Toplam Süre (sn)').drop(columns=['Kategori', 'Genel Toplam Süre (sn)']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    elif not df_team_day1.empty and kadın_kat in df_team_day1['Kategori'].values:
+                        st.caption("1. Gün Sıralaması")
+                        df_show = df_team_day1[df_team_day1['Kategori'] == kadın_kat].drop(columns=['Kategori']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Henüz veri yok.")
+                else: st.info("Kategori bulunamadı.")
+                
+            with summary_col2:
+                st.markdown("<h4 style='text-align: center; color: #1f77b4;'>👨‍🎓 ERKEKLER TAKIM</h4>", unsafe_allow_html=True)
+                erkek_kat = next((k for k in categories if "ERKEK" in k.upper()), None)
+                if erkek_kat:
+                    if not df_team_genel.empty and erkek_kat in df_team_genel['Kategori'].values:
+                        st.caption("Genel Toplam (1.+2. Gün)")
+                        df_show = df_team_genel[df_team_genel['Kategori'] == erkek_kat].sort_values(by='Genel Toplam Süre (sn)').drop(columns=['Kategori', 'Genel Toplam Süre (sn)']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    elif not df_team_day1.empty and erkek_kat in df_team_day1['Kategori'].values:
+                        st.caption("1. Gün Sıralaması")
+                        df_show = df_team_day1[df_team_day1['Kategori'] == erkek_kat].drop(columns=['Kategori']).reset_index(drop=True)
+                        df_show.index += 1
+                        st.dataframe(df_show, use_container_width=True)
+                    else: st.info("Henüz veri yok.")
+                else: st.info("Kategori bulunamadı.")
+                
+            st.info("💡 Bireysel sonuçlar ve detaylı analizler için yukarıdan kategori seçebilirsiniz.")
         else:
             kat = selected_kat
             
