@@ -43,14 +43,19 @@ def seconds_to_time(sec):
 
 def load_data():
     if os.path.exists(DATA_FILE):
-        df = pd.read_csv(DATA_FILE, dtype={'Göğüs No': str, '1. Gün Süresi': str, '2. Gün Süresi': str, 'Çıkış Saati': str})
+        df = pd.read_csv(DATA_FILE, dtype={'Göğüs No': str, '1. Gün Süresi': str, '2. Gün Süresi': str, '1. Gün Çıkış': str, '2. Gün Çıkış': str})
         # Gerekli sütunları garantiye al
-        expected_cols = ['Göğüs No', 'İsim', 'Üniversite', 'Kategori', 'Çıkış Saati', '1. Gün Süresi', '2. Gün Süresi', 'Durum']
+        expected_cols = ['Göğüs No', 'İsim', 'Üniversite', 'Kategori', '1. Gün Çıkış', '2. Gün Çıkış', '1. Gün Süresi', '2. Gün Süresi', 'Durum']
         for col in expected_cols:
-            if col not in df.columns: df[col] = ""
+            if col not in df.columns: 
+                # Eski sürümden geçiş için 'Çıkış Saati' varsa '1. Gün Çıkış'a aktar
+                if col == '1. Gün Çıkış' and 'Çıkış Saati' in df.columns:
+                    df['1. Gün Çıkış'] = df['Çıkış Saati']
+                else:
+                    df[col] = ""
         return df
     else:
-        return pd.DataFrame(columns=['Göğüs No', 'İsim', 'Üniversite', 'Kategori', 'Çıkış Saati', '1. Gün Süresi', '2. Gün Süresi', 'Durum'])
+        return pd.DataFrame(columns=['Göğüs No', 'İsim', 'Üniversite', 'Kategori', '1. Gün Çıkış', '2. Gün Çıkış', '1. Gün Süresi', '2. Gün Süresi', 'Durum'])
 
 def save_data(df):
     df.to_csv(DATA_FILE, index=False)
@@ -125,17 +130,23 @@ def parse_start_list(file):
                         current_univ = re.sub(r'[\(\)\d\s]+$', '', raw_univ).strip()
                         continue
                         
+                    # S1 ve S2 sütunlarını kontrol et
                     if len(parts) >= 5 and ":" in parts[-1]:
                         s1_time = ""
+                        s2_time = ""
                         kat = ""
-                        isim_bitis = -2
+                        isim_bitis = -1
                         
-                        if ":" in parts[-2]: 
+                        # Eğer son iki sütun da saatse (S1 ve S2)
+                        if ":" in parts[-1] and ":" in parts[-2]:
                             s1_time = parts[-2]
+                            s2_time = parts[-1]
                             kat = parts[-3]
                             isim_bitis = -3
-                        else: 
+                        else:
+                            # Sadece bir saat varsa (muhtemelen S1 veya tek etap)
                             s1_time = parts[-1]
+                            s2_time = ""
                             kat = parts[-2]
                             isim_bitis = -2
                             
@@ -147,8 +158,8 @@ def parse_start_list(file):
                             
                             data.append({
                                 'Göğüs No': str(bib), 'İsim': isim, 'Üniversite': current_univ, 
-                                'Kategori': kat, 'Çıkış Saati': s1_time, '1. Gün Süresi': "", 
-                                '2. Gün Süresi': "", 'Durum': 'Bekliyor'
+                                'Kategori': kat, '1. Gün Çıkış': s1_time, '2. Gün Çıkış': s2_time,
+                                '1. Gün Süresi': "", '2. Gün Süresi': "", 'Durum': 'Bekliyor'
                             })
     return pd.DataFrame(data)
 
@@ -223,15 +234,18 @@ def get_general_individual_scores(df_calc):
 
 
 
-def update_dynamic_status(df):
+def update_dynamic_status(df, current_day=1):
     df_dyn = df.copy()
     current_time_str = datetime.now().strftime("%H:%M:%S")
     current_sec = time_to_seconds(current_time_str)
     
+    col_name = f"{current_day}. Gün Çıkış"
+    if col_name not in df_dyn.columns: return df_dyn
+    
     mask = ~df_dyn['Durum'].isin(['Tamamladı', 'MP', 'DNF', 'DNS', 'DSQ'])
     if mask.any():
         for idx, row in df_dyn[mask].iterrows():
-            cikis_saati = str(row['Çıkış Saati']).strip()
+            cikis_saati = str(row[col_name]).strip()
             if cikis_saati and ':' in cikis_saati:
                 cikis_sec = time_to_seconds(cikis_saati)
                 if current_sec >= cikis_sec:
@@ -245,13 +259,16 @@ def update_dynamic_status(df):
 # --- ANA EKRAN / SEKMELER ---
 tab1, tab2 = st.tabs(["👁️ İzleyici Paneli", "⚙️ Admin Paneli"])
 
-# Veriyi hesapla
-df_current = update_dynamic_status(st.session_state.df)
-df_scored = prepare_data(df_current) if not df_current.empty else pd.DataFrame()
-
 with tab1:
     st_autorefresh(interval=60000, key="data_refresh")
     st.title("🏆 Ünilig Oryantiring Canlı Sonuçlar")
+    
+    # Gün seçimi (Bekleyenler listesi ve durum takibi için)
+    current_race_day = st.sidebar.selectbox("⏱️ Takip Edilen Gün", [1, 2], index=0, help="Parkurda/Bekliyor durumu hangi günün çıkış saatine göre hesaplansın?")
+    
+    # Veriyi hesapla (Artık gün seçimine göre)
+    df_current = update_dynamic_status(st.session_state.df, current_race_day)
+    df_scored = prepare_data(df_current) if not df_current.empty else pd.DataFrame()
     
     if not df_scored.empty:
         categories = [k for k in df_scored['Kategori'].dropna().unique() if 'KADIN' in str(k).upper() or 'ERKEK' in str(k).upper()]
@@ -378,11 +395,18 @@ with tab1:
                 else: st.info("Sonuç yok.")
 
         st.divider()
-        st.subheader("⏳ Henüz Gelmeyen / Parkurda Bekleyen Sporcular")
-        bekleyenler = df_scored[df_scored['Durum'].isin(['Parkurda', 'Bekliyor', 'Parkurda/Bekliyor'])].copy()
-        bekleyenler['cikis_sec'] = bekleyenler['Çıkış Saati'].apply(time_to_seconds)
+        st.subheader("⏳ ODTÜ Sporcuları (Takip Paneli)")
+        st.caption(f"{current_race_day}. Gün Çıkış Listesine Göre")
+        
+        # ODTÜ filtresi ve Bekleyenler
+        odtü_mask = df_scored['Üniversite'].str.contains('ORTA DOĞU TEKNİK', na=False, case=False)
+        bekleyenler = df_scored[odtü_mask & df_scored['Durum'].isin(['Parkurda', 'Bekliyor', 'Parkurda/Bekliyor'])].copy()
+        
+        cikis_col = f'{current_race_day}. Gün Çıkış'
+        bekleyenler['cikis_sec'] = bekleyenler[cikis_col].apply(time_to_seconds)
         bekleyenler = bekleyenler.sort_values(by='cikis_sec', ascending=True)
-        st.dataframe(bekleyenler[['Göğüs No', 'İsim', 'Üniversite', 'Kategori', 'Çıkış Saati', 'Durum']], use_container_width=True, hide_index=True)
+        
+        st.dataframe(bekleyenler[['Göğüs No', 'İsim', 'Kategori', cikis_col, 'Durum']], use_container_width=True, hide_index=True)
         
         hatalilar_df = df_scored[df_scored['Durum'].isin(['MP', 'DNF', 'DNS', 'DSQ'])]
         if not hatalilar_df.empty:
@@ -426,7 +450,8 @@ with tab1:
                     st.info("**🥈 2. Gün Ortalama Süre:** Veri Yok")
                     
             with c_t3:
-                valid_starts = [s for s in df_stat['Çıkış Saati'].dropna().astype(str) if ':' in s]
+                cikis_col_stat = f'{current_race_day}. Gün Çıkış'
+                valid_starts = [s for s in df_stat[cikis_col_stat].dropna().astype(str) if ':' in s]
                 if valid_starts:
                     last_start_str = max(valid_starts)
                     last_sec = time_to_seconds(last_start_str)
@@ -572,7 +597,7 @@ with tab2:
         st.divider()
         st.subheader("Tehlikeli İşlemler")
         if st.button("Tüm Veriyi Sıfırla"):
-            update_data(pd.DataFrame(columns=['Göğüs No', 'İsim', 'Üniversite', 'Kategori', 'Çıkış Saati', '1. Gün Süresi', '2. Gün Süresi', 'Durum']))
+            update_data(pd.DataFrame(columns=['Göğüs No', 'İsim', 'Üniversite', 'Kategori', '1. Gün Çıkış', '2. Gün Çıkış', '1. Gün Süresi', '2. Gün Süresi', 'Durum']))
             st.warning("Veriler sıfırlandı!")
             
     elif admin_pass != "":
