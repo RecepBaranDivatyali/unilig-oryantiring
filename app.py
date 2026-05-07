@@ -301,71 +301,93 @@ with tab1:
         selected_kat = st.radio("📌 **Lütfen Sıralamasını Görmek İstediğiniz Kategoriyi Seçiniz:**", categories_with_default, horizontal=True)
         st.markdown("<hr style='border: 2px solid #ccc; margin: 10px 0 30px 0;'>", unsafe_allow_html=True)
         
-        if selected_kat == "Seçiniz...":
-            st.markdown("### 🏆 TAKIM SIRALAMALARI ÖZETİ")
-            summary_col1, summary_col2 = st.columns(2)
-            
-            with summary_col1:
-                st.markdown("<h4 style='text-align: center; color: #ff4b4b;'>👩‍🎓 KADINLAR TAKIM</h4>", unsafe_allow_html=True)
-                # Genel varsa genel, yoksa 1. gün
-                kadın_kat = next((k for k in categories if "KADIN" in k.upper()), None)
-                if kadın_kat:
-                    if not df_team_genel.empty and kadın_kat in df_team_genel['Kategori'].values:
-                        st.caption("Genel Toplam (1.+2. Gün)")
-                        df_show = df_team_genel[df_team_genel['Kategori'] == kadın_kat].sort_values(by='Genel Toplam Süre (sn)').drop(columns=['Kategori', 'Genel Toplam Süre (sn)']).reset_index(drop=True)
-                        df_show.index += 1
-                        st.dataframe(df_show, use_container_width=True)
-                    elif not df_team_day1.empty and kadın_kat in df_team_day1['Kategori'].values:
-                        st.caption("1. Gün Sıralaması")
-                        df_show = df_team_day1[df_team_day1['Kategori'] == kadın_kat].drop(columns=['Kategori']).reset_index(drop=True)
-                        df_show.index += 1
-                        st.dataframe(df_show, use_container_width=True)
-                    else: st.info("Henüz veri yok.")
-                else: st.info("Kategori bulunamadı.")
-                
-            with summary_col2:
-                st.markdown("<h4 style='text-align: center; color: #1f77b4;'>👨‍🎓 ERKEKLER TAKIM</h4>", unsafe_allow_html=True)
-                erkek_kat = next((k for k in categories if "ERKEK" in k.upper()), None)
-                if erkek_kat:
-                    if not df_team_genel.empty and erkek_kat in df_team_genel['Kategori'].values:
-                        st.caption("Genel Toplam (1.+2. Gün)")
-                        df_show = df_team_genel[df_team_genel['Kategori'] == erkek_kat].sort_values(by='Genel Toplam Süre (sn)').drop(columns=['Kategori', 'Genel Toplam Süre (sn)']).reset_index(drop=True)
-                        df_show.index += 1
-                        st.dataframe(df_show, use_container_width=True)
-                    elif not df_team_day1.empty and erkek_kat in df_team_day1['Kategori'].values:
-                        st.caption("1. Gün Sıralaması")
-                        df_show = df_team_day1[df_team_day1['Kategori'] == erkek_kat].drop(columns=['Kategori']).reset_index(drop=True)
-                        df_show.index += 1
-                        st.dataframe(df_show, use_container_width=True)
-                    else: st.info("Henüz veri yok.")
-                else: st.info("Kategori bulunamadı.")
-                
-            st.info("💡 Bireysel sonuçlar ve detaylı analizler için yukarıdan kategori seçebilirsiniz.")
-        else:
+        st.markdown("<h2 style='text-align: center; color: #FFD700;'>🏆 TAKIM SIRALAMALARI (GENEL DURUM)</h2>", unsafe_allow_html=True)
+        
+        # --- KADINLAR ÖZET ---
+        st.markdown("<h3 style='text-align: center; color: #ff4b4b;'>👩‍🎓 KADINLAR TAKIM SIRALAMASI</h3>", unsafe_allow_html=True)
+        kadın_kat = next((k for k in categories if "KADIN" in k.upper()), None)
+        if kadın_kat:
+            s_col1, s_col2, s_col3 = st.columns(3)
+            with s_col1:
+                st.markdown("<p style='text-align: center;'><b>🥇 1. GÜN</b></p>", unsafe_allow_html=True)
+                if not df_team_day1.empty and kadın_kat in df_team_day1['Kategori'].values:
+                    df_show = df_team_day1[df_team_day1['Kategori'] == kadın_kat].drop(columns=['Kategori']).reset_index(drop=True)
+                    df_show.index += 1
+                    st.dataframe(df_show, use_container_width=True)
+                else: st.info("Henüz sonuç yok.")
+            with s_col2:
+                st.markdown("<p style='text-align: center;'><b>🥈 2. GÜN</b></p>", unsafe_allow_html=True)
+                if not df_team_day2.empty and kadın_kat in df_team_day2['Kategori'].values:
+                    df_show = df_team_day2[df_team_day2['Kategori'] == kadın_kat].drop(columns=['Kategori']).reset_index(drop=True)
+                    df_show.index += 1
+                    st.dataframe(df_show, use_container_width=True)
+                else: st.info("Henüz sonuç yok.")
+            with s_col3:
+                st.markdown("<p style='text-align: center;'><b>🏆 GENEL TOPLAM</b></p>", unsafe_allow_html=True)
+                if not df_team_genel.empty and kadın_kat in df_team_genel['Kategori'].values:
+                    df_show = df_team_genel[df_team_genel['Kategori'] == kadın_kat].sort_values(by='Genel Toplam Süre (sn)').drop(columns=['Kategori', 'Genel Toplam Süre (sn)']).reset_index(drop=True)
+                    df_show.index += 1
+                    st.dataframe(df_show, use_container_width=True)
+                else: st.info("Her iki gün tamamlanınca oluşur.")
+        
+        st.divider()
+        
+        # --- ERKEKLER ÖZET ---
+        st.markdown("<h3 style='text-align: center; color: #1f77b4;'>👨‍🎓 ERKEKLER TAKIM SIRALAMASI</h3>", unsafe_allow_html=True)
+        erkek_kat = next((k for k in categories if "ERKEK" in k.upper()), None)
+        if erkek_kat:
+            s_col4, s_col5, s_col6 = st.columns(3)
+            with s_col4:
+                st.markdown("<p style='text-align: center;'><b>🥇 1. GÜN</b></p>", unsafe_allow_html=True)
+                if not df_team_day1.empty and erkek_kat in df_team_day1['Kategori'].values:
+                    df_show = df_team_day1[df_team_day1['Kategori'] == erkek_kat].drop(columns=['Kategori']).reset_index(drop=True)
+                    df_show.index += 1
+                    st.dataframe(df_show, use_container_width=True)
+                else: st.info("Henüz sonuç yok.")
+            with s_col5:
+                st.markdown("<p style='text-align: center;'><b>🥈 2. GÜN</b></p>", unsafe_allow_html=True)
+                if not df_team_day2.empty and erkek_kat in df_team_day2['Kategori'].values:
+                    df_show = df_team_day2[df_team_day2['Kategori'] == erkek_kat].drop(columns=['Kategori']).reset_index(drop=True)
+                    df_show.index += 1
+                    st.dataframe(df_show, use_container_width=True)
+                else: st.info("Henüz sonuç yok.")
+            with s_col6:
+                st.markdown("<p style='text-align: center;'><b>🏆 GENEL TOPLAM</b></p>", unsafe_allow_html=True)
+                if not df_team_genel.empty and erkek_kat in df_team_genel['Kategori'].values:
+                    df_show = df_team_genel[df_team_genel['Kategori'] == erkek_kat].sort_values(by='Genel Toplam Süre (sn)').drop(columns=['Kategori', 'Genel Toplam Süre (sn)']).reset_index(drop=True)
+                    df_show.index += 1
+                    st.dataframe(df_show, use_container_width=True)
+                else: st.info("Her iki gün tamamlanınca oluşur.")
+
+        st.divider()
+        categories_with_default = ["Seçiniz..."] + categories
+        selected_kat = st.radio("📌 **Bireysel Sonuçlar ve Detaylı Analiz İçin Kategori Seçin:**", categories_with_default, horizontal=True)
+        st.markdown("<hr style='border: 2px solid #ccc; margin: 10px 0 30px 0;'>", unsafe_allow_html=True)
+        
+        if selected_kat != "Seçiniz...":
             kat = selected_kat
+            st.markdown(f"<h2 style='text-align: center; color: #4CAF50;'>🏃‍♂️ {kat} DETAYLI SONUÇLAR 🏃‍♀️</h2>", unsafe_allow_html=True)
             
-            st.markdown(f"<h2 style='text-align: center; color: #4CAF50;'>🏃‍♂️ {kat} KATEGORİSİ 🏃‍♀️</h2>", unsafe_allow_html=True)
-            
-            st.markdown("### 🏆 TAKIM SIRALAMALARI")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.markdown("**🥇 1. Gün Takım**")
-                if not df_team_day1.empty and kat in df_team_day1['Kategori'].values:
-                    df_show = df_team_day1[df_team_day1['Kategori'] == kat].drop(columns=['Kategori']).reset_index(drop=True)
+            st.markdown("### 👤 BİREYSEL SIRALAMALAR")
+            col4, col5, col6 = st.columns(3)
+            with col4:
+                st.markdown("**🥇 1. Gün Bireysel**")
+                if not df_ind_day1.empty and kat in df_ind_day1['Kategori'].values:
+                    df_show = df_ind_day1[df_ind_day1['Kategori'] == kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
                     df_show.index += 1
                     st.dataframe(df_show, use_container_width=True)
                 else: st.info("Sonuç yok.")
-            with col2:
-                st.markdown("**🥈 2. Gün Takım**")
-                if not df_team_day2.empty and kat in df_team_day2['Kategori'].values:
-                    df_show = df_team_day2[df_team_day2['Kategori'] == kat].drop(columns=['Kategori']).reset_index(drop=True)
+            with col5:
+                st.markdown("**🥈 2. Gün Bireysel**")
+                if not df_ind_day2.empty and kat in df_ind_day2['Kategori'].values:
+                    df_show = df_ind_day2[df_ind_day2['Kategori'] == kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
                     df_show.index += 1
                     st.dataframe(df_show, use_container_width=True)
                 else: st.info("Sonuç yok.")
-            with col3:
-                st.markdown("**🏆 Genel Takım**")
-                if not df_team_genel.empty and kat in df_team_genel['Kategori'].values:
-                    df_show = df_team_genel[df_team_genel['Kategori'] == kat].sort_values(by='Genel Toplam Süre (sn)').drop(columns=['Kategori', 'Genel Toplam Süre (sn)']).reset_index(drop=True)
+            with col6:
+                st.markdown("**🏆 Genel Bireysel**")
+                if not df_ind_genel.empty and kat in df_ind_genel['Kategori'].values:
+                    df_show = df_ind_genel[df_ind_genel['Kategori'] == kat].drop(columns=['Kategori', 'Göğüs No']).reset_index(drop=True)
                     df_show.index += 1
                     st.dataframe(df_show, use_container_width=True)
                 else: st.info("Sonuç yok.")
